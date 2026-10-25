@@ -108,3 +108,4 @@ Claude Codeに委任。ただし以下は守る:
 - 日ごとの集計は端末のタイムゾーンの日付で区切る
 - 見た目（第6段階）: 図柄は canvas の図形で自作（7=文字、BAR=黒地の角丸に白文字1段、チェリー・ブドウ・ベル・ピエロは簡易図形、リプレイ=青い回転矢印）。揃ったラインの段を黄色く光らせる
 - ビルド: `npm run build` で dist/ に静的ファイルを出力（相対パスなので任意のパスに置ける）
+- デプロイ先: GitHub Pages（https://arsk0925-blip.github.io/meoshi-trainer/ ）。main に push すると GitHub Actions でテスト→ビルド→公開
