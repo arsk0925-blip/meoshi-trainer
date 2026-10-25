@@ -1,0 +1,17 @@
+{
+  "id": "machine-b",
+  "name": "機種B",
+  "msPerRevolution": 750,
+  "lines": [
+    ["middle", "middle", "middle"],
+    ["top", "top", "top"],
+    ["bottom", "bottom", "bottom"],
+    ["top", "middle", "bottom"],
+    ["bottom", "middle", "top"]
+  ],
+  "reels": [
+    ["grape", "replay", "grape", "BAR", "cherry", "grape", "replay", "grape", "clown", "7", "grape", "replay", "grape", "cherry", "BAR", "grape", "replay", "grape", "replay", "7", "bell"],
+    ["cherry", "grape", "bell", "replay", "cherry", "grape", "BAR", "replay", "cherry", "grape", "bell", "replay", "cherry", "grape", "BAR", "replay", "clown", "cherry", "grape", "7", "replay"],
+    ["replay", "bell", "clown", "grape", "replay", "bell", "clown", "grape", "replay", "bell", "clown", "grape", "replay", "bell", "clown", "grape", "replay", "bell", "BAR", "7", "grape"]
+  ]
+}

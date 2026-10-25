@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="description" content="スロットの目押し（ビタ押し・揃え・チェリー狙い）をスマホで練習できるトレーナー" />
+    <meta name="theme-color" content="#1b1b1f" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>目押しトレーナー</title>
+  </head>
+  <body>
+    <main class="app">
+      <h1>目押しトレーナー</h1>
+
+      <nav class="tabs">
+        <button type="button" class="tab active" data-view="practice">練習</button>
+        <button type="button" class="tab" data-view="history">履歴</button>
+      </nav>
+
+      <section id="practice" class="view">
+        <div class="settings">
+          <label>機種
+            <select id="machine"></select>
+          </label>
+          <label>モード
+            <select id="mode"></select>
+          </label>
+          <label id="target-field">狙い
+            <select id="target"></select>
+          </label>
+        </div>
+
+        <div class="status">
+          <p id="verdict" class="verdict"></p>
+          <p id="streak" class="streak"></p>
+        </div>
+
+        <div class="reels">
+          <div class="reel-col">
+            <canvas class="reel"></canvas>
+            <p class="reel-result"></p>
+          </div>
+          <div class="reel-col">
+            <canvas class="reel"></canvas>
+            <p class="reel-result"></p>
+          </div>
+          <div class="reel-col">
+            <canvas class="reel"></canvas>
+            <p class="reel-result"></p>
+          </div>
+        </div>
+
+        <div class="stops">
+          <button class="stop" type="button" disabled>停止</button>
+          <button class="stop" type="button" disabled>停止</button>
+          <button class="stop" type="button" disabled>停止</button>
+        </div>
+
+        <button id="lever" class="lever" type="button">スタート</button>
+        <p id="save-error" class="save-error" hidden>記録を保存できませんでした（プライベートモードや容量不足の可能性があります）</p>
+      </section>
+
+      <section id="history" class="view" hidden>
+        <div id="history-body"></div>
+        <p class="note">記録はこの端末のブラウザに保存されています。ブラウザのデータを消すと記録も消えます。</p>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
