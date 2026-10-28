@@ -28,7 +28,10 @@
           <label id="target-field">狙い
             <select id="target"></select>
           </label>
-          <button id="sound-toggle" class="sound-toggle" type="button"></button>
+          <span class="sound-controls">
+            <button id="sound-toggle" class="sound-toggle" type="button"></button>
+            <input id="volume" class="volume" type="range" min="0" max="100" step="5" aria-label="音量" />
+          </span>
         </div>
 
         <p id="mode-hint" class="mode-hint"></p>

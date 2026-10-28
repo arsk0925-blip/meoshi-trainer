@@ -337,3 +337,18 @@ button:disabled {
   color: #999;
   margin: 8px 0 0;
 }
+
+.sound-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume {
+  width: 110px;
+  accent-color: #5c6bc0;
+}
+
+.volume:disabled {
+  opacity: 0.35;
+}

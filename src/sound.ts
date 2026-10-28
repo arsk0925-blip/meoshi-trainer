@@ -16,14 +16,22 @@ const STOP_PITCH = [1, 1.12, 1.26];
 
 export class Sound {
   enabled: boolean;
+  private volume: number;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private spin: { gain: GainNode; sources: AudioScheduledSourceNode[] } | null = null;
   private tenpaiHold: { gain: GainNode; sources: AudioScheduledSourceNode[] } | null = null;
 
-  constructor(enabled: boolean) {
+  constructor(enabled: boolean, volume: number) {
     this.enabled = enabled;
+    this.volume = volume;
+  }
+
+  /** 音量 0〜1。聞こえ方が自然になるよう2乗して使う */
+  setVolume(volume: number): void {
+    this.volume = volume;
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(volume * volume, this.ctx.currentTime, 0.02);
   }
 
   /** ブラウザの制約で、音はユーザー操作の中で初めて鳴らせる。pointerdown の中で呼ぶ */
@@ -41,7 +49,7 @@ export class Sound {
       compressor.release.value = 0.12;
       compressor.connect(this.ctx.destination);
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.7;
+      this.master.gain.value = this.volume * this.volume;
       this.master.connect(compressor);
       this.noise = this.makeNoise(this.ctx);
     }
@@ -90,7 +98,7 @@ export class Sound {
     humFilter.type = 'lowpass';
     humFilter.frequency.value = 350;
     const humGain = ctx.createGain();
-    humGain.gain.value = 0.1;
+    humGain.gain.value = 0.03;
     hum.connect(humFilter).connect(humGain).connect(gain);
 
     // 図柄の通過（ノイズを図柄の通過速度で刻む）
@@ -102,13 +110,13 @@ export class Sound {
     rattleFilter.frequency.value = 1100;
     rattleFilter.Q.value = 1.5;
     const rattleGain = ctx.createGain();
-    rattleGain.gain.value = 0.05;
+    rattleGain.gain.value = 0.015;
     const lfo = ctx.createOscillator();
     lfo.type = 'square';
     lfo.frequency.setValueAtTime(2, t);
     lfo.frequency.linearRampToValueAtTime(symbolsPerSecond, t + accel);
     const lfoDepth = ctx.createGain();
-    lfoDepth.gain.value = 0.04;
+    lfoDepth.gain.value = 0.012;
     lfo.connect(lfoDepth).connect(rattleGain.gain);
     rattle.connect(rattleFilter).connect(rattleGain).connect(gain);
 

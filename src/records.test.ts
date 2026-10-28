@@ -85,11 +85,11 @@ describe('保存と読み込み', () => {
 
   it('設定を保存して読み戻せる。未保存・壊れた値は既定値', () => {
     const storage = new MemoryStorage();
-    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true });
-    saveSettings(storage, { timingOffsetMs: 40, soundEnabled: false });
-    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 40, soundEnabled: false });
-    storage.setItem('meoshi.settings.v1', '{"timingOffsetMs":"x","soundEnabled":1}');
-    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true });
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true, volume: 0.7 });
+    saveSettings(storage, { timingOffsetMs: 40, soundEnabled: false, volume: 0.3 });
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 40, soundEnabled: false, volume: 0.3 });
+    storage.setItem('meoshi.settings.v1', '{"timingOffsetMs":"x","soundEnabled":1,"volume":5}');
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true, volume: 0.7 });
   });
 
   it('書き込みに失敗したら false を返す', () => {

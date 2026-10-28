@@ -73,7 +73,7 @@ function getStorage(): Storage | null {
 const storage = getStorage();
 
 const settings = storage ? loadSettings(storage) : { ...DEFAULT_SETTINGS };
-const sound = new Sound(settings.soundEnabled);
+const sound = new Sound(settings.soundEnabled, settings.volume);
 
 const savedStreaks = storage ? loadStreaks(storage) : {};
 const streaks = new Map<ModeId, Streak>(
@@ -92,6 +92,7 @@ const saveErrorEl = document.querySelector<HTMLElement>('#save-error')!;
 const historyBody = document.querySelector<HTMLElement>('#history-body')!;
 const offsetValueEl = document.querySelector<HTMLElement>('#offset-value')!;
 const soundToggle = document.querySelector<HTMLButtonElement>('#sound-toggle')!;
+const volumeInput = document.querySelector<HTMLInputElement>('#volume')!;
 const offsetMessageEl = document.querySelector<HTMLElement>('#offset-message')!;
 const canvases = document.querySelectorAll<HTMLCanvasElement>('.reel');
 const resultEls = document.querySelectorAll<HTMLElement>('.reel-result');
@@ -380,7 +381,20 @@ function saveSettingsToStorage(): void {
 function showSound(): void {
   soundToggle.textContent = settings.soundEnabled ? '音 ON' : '音 OFF';
   soundToggle.classList.toggle('off', !settings.soundEnabled);
+  volumeInput.value = String(Math.round(settings.volume * 100));
+  volumeInput.disabled = !settings.soundEnabled;
 }
+
+volumeInput.addEventListener('input', () => {
+  settings.volume = Number(volumeInput.value) / 100;
+  sound.setVolume(settings.volume);
+});
+volumeInput.addEventListener('change', () => {
+  saveSettingsToStorage();
+  // 調整した音量で確認できるよう停止音を1回鳴らす
+  sound.unlock();
+  sound.stopClick(0, 0);
+});
 
 soundToggle.addEventListener('click', () => {
   settings.soundEnabled = !settings.soundEnabled;

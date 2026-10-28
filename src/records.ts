@@ -75,17 +75,22 @@ export function saveStreaks(storage: Storage, streaks: Streaks): boolean {
 export interface Settings {
   timingOffsetMs: number;
   soundEnabled: boolean;
+  /** 音量 0〜1 */
+  volume: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { timingOffsetMs: 0, soundEnabled: true };
+export const DEFAULT_SETTINGS: Settings = { timingOffsetMs: 0, soundEnabled: true, volume: 0.7 };
 
 export function loadSettings(storage: Storage): Settings {
   const saved = readJson<unknown>(storage, SETTINGS_KEY, {}) as Partial<Settings> | null;
   const offset = saved?.timingOffsetMs;
   const sound = saved?.soundEnabled;
+  const volume = saved?.volume;
   return {
     timingOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : DEFAULT_SETTINGS.timingOffsetMs,
     soundEnabled: typeof sound === 'boolean' ? sound : DEFAULT_SETTINGS.soundEnabled,
+    volume:
+      typeof volume === 'number' && volume >= 0 && volume <= 1 ? volume : DEFAULT_SETTINGS.volume,
   };
 }
 
