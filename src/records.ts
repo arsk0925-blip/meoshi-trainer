@@ -74,12 +74,19 @@ export function saveStreaks(storage: Storage, streaks: Streaks): boolean {
 
 export interface Settings {
   timingOffsetMs: number;
+  soundEnabled: boolean;
 }
 
+export const DEFAULT_SETTINGS: Settings = { timingOffsetMs: 0, soundEnabled: true };
+
 export function loadSettings(storage: Storage): Settings {
-  const saved = readJson<unknown>(storage, SETTINGS_KEY, {});
-  const offset = (saved as Partial<Settings> | null)?.timingOffsetMs;
-  return { timingOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0 };
+  const saved = readJson<unknown>(storage, SETTINGS_KEY, {}) as Partial<Settings> | null;
+  const offset = saved?.timingOffsetMs;
+  const sound = saved?.soundEnabled;
+  return {
+    timingOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : DEFAULT_SETTINGS.timingOffsetMs,
+    soundEnabled: typeof sound === 'boolean' ? sound : DEFAULT_SETTINGS.soundEnabled,
+  };
 }
 
 export function saveSettings(storage: Storage, settings: Settings): boolean {

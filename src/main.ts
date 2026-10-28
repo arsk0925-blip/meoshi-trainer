@@ -16,7 +16,9 @@ import { pressTime } from './input';
 import { loadMachines, msPerSymbol, type Machine, type Row } from './machine';
 import { MODES, type Mode, type ModeId } from './modes';
 import { ReelView, SYMBOL_LABELS } from './reelView';
+import { Sound } from './sound';
 import {
+  DEFAULT_SETTINGS,
   appendRecord,
   loadRecords,
   loadSettings,
@@ -69,7 +71,8 @@ function getStorage(): Storage | null {
 }
 const storage = getStorage();
 
-const settings = storage ? loadSettings(storage) : { timingOffsetMs: 0 };
+const settings = storage ? loadSettings(storage) : { ...DEFAULT_SETTINGS };
+const sound = new Sound(settings.soundEnabled);
 
 const savedStreaks = storage ? loadStreaks(storage) : {};
 const streaks = new Map<ModeId, Streak>(
@@ -86,6 +89,7 @@ const lever = document.querySelector<HTMLButtonElement>('#lever')!;
 const saveErrorEl = document.querySelector<HTMLElement>('#save-error')!;
 const historyBody = document.querySelector<HTMLElement>('#history-body')!;
 const offsetValueEl = document.querySelector<HTMLElement>('#offset-value')!;
+const soundToggle = document.querySelector<HTMLButtonElement>('#sound-toggle')!;
 const offsetMessageEl = document.querySelector<HTMLElement>('#offset-message')!;
 const canvases = document.querySelectorAll<HTMLCanvasElement>('.reel');
 const resultEls = document.querySelectorAll<HTMLElement>('.reel-result');
@@ -199,6 +203,7 @@ function finishGame(): void {
     verdictEl.textContent = success ? '揃った！' : 'ハズレ';
   }
   verdictEl.className = `verdict ${success ? 'hit' : 'miss'}`;
+  if (success) sound.win(mode.id);
 
   streaks.set(mode.id, nextStreak(streaks.get(mode.id)!, success));
   showStreak();
@@ -285,6 +290,9 @@ lever.addEventListener('pointerdown', (event) => {
     reel.done = false;
     reel.stopButton.disabled = true; // 最高速に達するまで押せない
   }
+  sound.unlock();
+  sound.lever();
+  sound.startSpin();
   gameRunning = true;
   lever.disabled = true;
   setSettingsDisabled(true);
@@ -315,6 +323,12 @@ reels.forEach((reel, i) => {
     }
     // 表示を先回りさせていると、表示がすでに停止位置を過ぎていることがある
     reel.overshoot = reel.position - reel.stopTarget;
+
+    // 画面上でリールが止まる時刻に停止音を鳴らす
+    const stoppedAt = stopTime(reel.startTime, reel.msPerSymbol, reel.stopTarget, reel.startPosition);
+    const delay = stoppedAt - settings.timingOffsetMs - performance.now();
+    sound.stopClick(delay);
+    if (mode.activeReels.every((j) => reels[j].stopTarget !== null)) sound.stopSpin(delay);
   });
 });
 
@@ -347,13 +361,30 @@ for (const tab of document.querySelectorAll<HTMLButtonElement>('.tab')) {
   });
 }
 
+function saveSettingsToStorage(): void {
+  if (storage) saveSettings(storage, settings);
+}
+
+function showSound(): void {
+  soundToggle.textContent = settings.soundEnabled ? '音 ON' : '音 OFF';
+  soundToggle.classList.toggle('off', !settings.soundEnabled);
+}
+
+soundToggle.addEventListener('click', () => {
+  settings.soundEnabled = !settings.soundEnabled;
+  sound.setEnabled(settings.soundEnabled);
+  sound.unlock();
+  saveSettingsToStorage();
+  showSound();
+});
+
 function showOffset(): void {
   offsetValueEl.textContent = formatOffset(settings.timingOffsetMs);
 }
 
 function setOffset(offsetMs: number): void {
   settings.timingOffsetMs = clampOffset(offsetMs);
-  if (storage) saveSettings(storage, settings);
+  saveSettingsToStorage();
   showOffset();
 }
 
@@ -375,6 +406,7 @@ document.querySelector('#offset-auto')!.addEventListener('click', () => {
   offsetMessageEl.textContent = `直近${suggestion.trials}回のビタ押しから「${formatOffset(settings.timingOffsetMs)}」に設定しました`;
 });
 
+showSound();
 showOffset();
 setMachine(machine);
 setMode(mode);

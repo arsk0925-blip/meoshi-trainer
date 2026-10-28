@@ -3,7 +3,9 @@ import {
   appendRecord,
   dailyByMode,
   loadRecords,
+  loadSettings,
   loadStreaks,
+  saveSettings,
   saveStreaks,
   summaryByMode,
   uuid,
@@ -79,6 +81,15 @@ describe('保存と読み込み', () => {
     storage.setItem('meoshi.streaks.v1', 'null');
     expect(loadRecords(storage)).toEqual([]);
     expect(loadStreaks(storage)).toEqual({});
+  });
+
+  it('設定を保存して読み戻せる。未保存・壊れた値は既定値', () => {
+    const storage = new MemoryStorage();
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true });
+    saveSettings(storage, { timingOffsetMs: 40, soundEnabled: false });
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 40, soundEnabled: false });
+    storage.setItem('meoshi.settings.v1', '{"timingOffsetMs":"x","soundEnabled":1}');
+    expect(loadSettings(storage)).toEqual({ timingOffsetMs: 0, soundEnabled: true });
   });
 
   it('書き込みに失敗したら false を返す', () => {

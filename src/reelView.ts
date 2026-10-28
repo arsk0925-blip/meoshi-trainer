@@ -54,13 +54,12 @@ export class ReelView {
       ctx.fillRect(0, ROW_INDEX[highlight] * cellHeight, width, cellHeight);
     }
 
-    const size = Math.min(width * 0.8, cellHeight * 0.85);
     const base = Math.floor(position);
     for (let k = base - 2; k <= base + 2; k++) {
       // k が大きいほど上にある。position が増えると下へ流れる
       const top = centerTop - (k - position) * cellHeight;
       if (top > height || top + cellHeight < 0) continue;
-      drawSymbol(ctx, strip[mod(k, strip.length)], width / 2, top + cellHeight / 2, size);
+      drawSymbol(ctx, strip[mod(k, strip.length)], width / 2, top + cellHeight / 2, width, cellHeight * 0.88);
     }
 
     // 中段の目安線
