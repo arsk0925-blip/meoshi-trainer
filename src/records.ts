@@ -13,10 +13,15 @@ export interface TrialRecord {
   framesOff: number;
   /** 止めたリールの「理想タイミングからのずれms」の絶対値の平均 */
   msOff: number;
+  /** 止めたリールの「理想タイミングからのずれms」の平均（符号つき。負=早い、正=遅い）。タイミング調整に使う */
+  msBias?: number;
+  /** この試行時のタイミング調整値(ms) */
+  timingOffsetMs?: number;
 }
 
 const RECORDS_KEY = 'meoshi.records.v1';
 const STREAKS_KEY = 'meoshi.streaks.v1';
+const SETTINGS_KEY = 'meoshi.settings.v1';
 
 /** UUID v4。crypto.randomUUID は https でしか使えないので、LAN の http でも動くよう自前で作る */
 export function uuid(): string {
@@ -61,6 +66,25 @@ export function loadStreaks(storage: Storage): Streaks {
 export function saveStreaks(storage: Storage, streaks: Streaks): boolean {
   try {
     storage.setItem(STREAKS_KEY, JSON.stringify(streaks));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface Settings {
+  timingOffsetMs: number;
+}
+
+export function loadSettings(storage: Storage): Settings {
+  const saved = readJson<unknown>(storage, SETTINGS_KEY, {});
+  const offset = (saved as Partial<Settings> | null)?.timingOffsetMs;
+  return { timingOffsetMs: typeof offset === 'number' && Number.isFinite(offset) ? offset : 0 };
+}
+
+export function saveSettings(storage: Storage, settings: Settings): boolean {
+  try {
+    storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     return true;
   } catch {
     return false;

@@ -57,6 +57,16 @@
         </div>
 
         <button id="lever" class="lever" type="button">スタート</button>
+        <details class="offset">
+          <summary>タイミング調整：<span id="offset-value"></span></summary>
+          <p class="offset-help">スマホは画面表示とタップに遅れがあるため、見たまま押すと実機より遅れて止まりやすくなります。ビタ押しモードで10回以上プレイしてから「自動調整」を押すと、この端末に合わせてリールの表示を先回りさせます。</p>
+          <div class="offset-buttons">
+            <button id="offset-minus" type="button">−5ms</button>
+            <button id="offset-auto" type="button">自動調整</button>
+            <button id="offset-plus" type="button">＋5ms</button>
+          </div>
+          <p id="offset-message" class="offset-message"></p>
+        </details>
         <p id="save-error" class="save-error" hidden>記録を保存できませんでした（プライベートモードや容量不足の可能性があります）</p>
       </section>
 

@@ -1,13 +1,33 @@
 import './style.css';
-import { reelPosition, stopPositionWithoutSlip, type SymbolId } from './reel';
+import {
+  bounceOffset,
+  canStop,
+  isBouncing,
+  reelPosition,
+  REWIND_MS,
+  rewindOffset,
+  stopPositionWithoutSlip,
+  stopTime,
+  type SymbolId,
+} from './reel';
 import { bitaDeviation, formatFrames, formatMs, type BitaResult } from './judge';
 import { alignedLine, nextStreak, stopWithPullIn, type Streak } from './align';
 import { pressTime } from './input';
 import { loadMachines, msPerSymbol, type Machine, type Row } from './machine';
 import { MODES, type Mode, type ModeId } from './modes';
 import { ReelView, SYMBOL_LABELS } from './reelView';
-import { appendRecord, loadRecords, loadStreaks, saveStreaks, uuid, type TrialRecord } from './records';
+import {
+  appendRecord,
+  loadRecords,
+  loadSettings,
+  loadStreaks,
+  saveSettings,
+  saveStreaks,
+  uuid,
+  type TrialRecord,
+} from './records';
 import { renderHistory } from './history';
+import { clampOffset, formatOffset, OFFSET_STEP, suggestOffset, CALIBRATION_MIN_TRIALS } from './calibration';
 
 interface Reel {
   view: ReelView;
@@ -16,10 +36,18 @@ interface Reel {
   msPerSymbol: number;
   resultEl: HTMLElement;
   stopButton: HTMLButtonElement;
-  /** 回転中なら開始時刻、停止中なら null */
+  /** このゲームで回しているなら開始時刻。回していないリールは null */
   startTime: number | null;
+  /** 回し始めた位置 */
+  startPosition: number;
   /** このゲームで決まった停止位置。未停止なら null */
   stopTarget: number | null;
+  /** 止まって揺れも収まったら true */
+  done: boolean;
+  /** 停止が決まった時刻と、その時点で表示が停止位置を通り過ぎていたコマ数 */
+  decidedAt: number;
+  overshoot: number;
+  /** 表示中の位置（停止時の揺れを含む） */
   position: number;
   /** このゲームの押下のずれ（狙い図柄を中段にスベリなしで止めるタイミング基準） */
   deviation: BitaResult | null;
@@ -41,6 +69,8 @@ function getStorage(): Storage | null {
 }
 const storage = getStorage();
 
+const settings = storage ? loadSettings(storage) : { timingOffsetMs: 0 };
+
 const savedStreaks = storage ? loadStreaks(storage) : {};
 const streaks = new Map<ModeId, Streak>(
   MODES.map((m) => [m.id, savedStreaks[m.id] ?? { current: 0, best: 0 }]),
@@ -55,6 +85,8 @@ const streakEl = document.querySelector<HTMLElement>('#streak')!;
 const lever = document.querySelector<HTMLButtonElement>('#lever')!;
 const saveErrorEl = document.querySelector<HTMLElement>('#save-error')!;
 const historyBody = document.querySelector<HTMLElement>('#history-body')!;
+const offsetValueEl = document.querySelector<HTMLElement>('#offset-value')!;
+const offsetMessageEl = document.querySelector<HTMLElement>('#offset-message')!;
 const canvases = document.querySelectorAll<HTMLCanvasElement>('.reel');
 const resultEls = document.querySelectorAll<HTMLElement>('.reel-result');
 const stopButtons = document.querySelectorAll<HTMLButtonElement>('.stop');
@@ -67,7 +99,11 @@ const reels: Reel[] = Array.from(canvases, (canvas, i) => ({
   resultEl: resultEls[i],
   stopButton: stopButtons[i],
   startTime: null,
+  startPosition: 0,
   stopTarget: null,
+  done: true,
+  decidedAt: 0,
+  overshoot: 0,
   position: 0,
   deviation: null,
   highlight: null,
@@ -135,10 +171,6 @@ function targetFor(i: number): SymbolId {
   return mode.goal?.[i] ?? (targetSelect.value as SymbolId);
 }
 
-function isSpinning(reel: Reel): boolean {
-  return reel.startTime !== null;
-}
-
 function drawAll(): void {
   for (const reel of reels) reel.view.draw(reel.strip, reel.position, reel.highlight);
 }
@@ -179,6 +211,7 @@ function finishGame(): void {
 function saveTrial(success: boolean, deviations: BitaResult[]): void {
   const average = (f: (d: BitaResult) => number) =>
     deviations.reduce((acc, d) => acc + Math.abs(f(d)), 0) / deviations.length;
+  const bias = deviations.reduce((acc, d) => acc + d.ms, 0) / deviations.length;
   const record: TrialRecord = {
     id: uuid(),
     recordedAt: new Date().toISOString(),
@@ -187,6 +220,8 @@ function saveTrial(success: boolean, deviations: BitaResult[]): void {
     success,
     framesOff: Math.round(average((d) => d.frames) * 100) / 100,
     msOff: Math.round(average((d) => d.ms) * 10) / 10,
+    msBias: Math.round(bias * 10) / 10,
+    timingOffsetMs: settings.timingOffsetMs,
   };
   const saved =
     storage !== null &&
@@ -196,16 +231,34 @@ function saveTrial(success: boolean, deviations: BitaResult[]): void {
 }
 
 function frame(now: number): void {
+  // タイミング調整: 表示を調整値ぶん先回りさせて、画面表示・タップ検出の遅れを打ち消す。
+  // 停止位置の判定は実際のタップ時刻で行う
+  const displayTime = now + settings.timingOffsetMs;
   for (const reel of reels) {
-    if (reel.startTime === null) continue;
-    reel.position = reelPosition(now, reel.startTime, reel.msPerSymbol, reel.stopTarget);
-    if (reel.stopTarget !== null && reel.position >= reel.stopTarget) {
-      reel.startTime = null;
+    if (reel.startTime === null || reel.done) continue;
+    if (reel.stopTarget === null) {
+      // 最高速に達したら停止ボタンを受け付ける
+      reel.stopButton.disabled = !canStop(now, reel.startTime);
+      reel.position = reelPosition(displayTime, reel.startTime, reel.msPerSymbol, null, reel.startPosition);
+      continue;
+    }
+    const stoppedAt = stopTime(reel.startTime, reel.msPerSymbol, reel.stopTarget, reel.startPosition);
+    const sinceStop = displayTime - stoppedAt;
+    const sinceDecision = now - reel.decidedAt;
+    if (sinceStop < 0) {
+      reel.position = reelPosition(displayTime, reel.startTime, reel.msPerSymbol, reel.stopTarget, reel.startPosition);
+    } else if (reel.overshoot > 0 && sinceDecision < REWIND_MS) {
+      reel.position = reel.stopTarget + rewindOffset(reel.overshoot, sinceDecision);
+    } else if (isBouncing(sinceStop)) {
+      reel.position = reel.stopTarget + bounceOffset(sinceStop);
+    } else {
+      reel.position = reel.stopTarget;
+      reel.done = true;
     }
   }
   drawAll();
 
-  if (reels.some(isSpinning)) {
+  if (reels.some((reel) => reel.startTime !== null && !reel.done)) {
     requestAnimationFrame(frame);
   } else if (gameRunning) {
     finishGame();
@@ -218,15 +271,19 @@ lever.addEventListener('pointerdown', (event) => {
   const t = pressTime(event.timeStamp, performance.now());
   clearResults();
   for (const reel of reels) {
+    reel.startTime = null;
     reel.stopTarget = null;
+    reel.done = true;
     reel.deviation = null;
     reel.highlight = null;
   }
   for (const i of mode.activeReels) {
     const reel = reels[i];
     // 前回の停止位置から回し始める
-    reel.startTime = t - reel.position * reel.msPerSymbol;
-    reel.stopButton.disabled = false;
+    reel.startTime = t;
+    reel.startPosition = Math.round(reel.position);
+    reel.done = false;
+    reel.stopButton.disabled = true; // 最高速に達するまで押せない
   }
   gameRunning = true;
   lever.disabled = true;
@@ -239,9 +296,11 @@ reels.forEach((reel, i) => {
     event.preventDefault();
     if (reel.startTime === null || reel.stopTarget !== null) return;
     const t = pressTime(event.timeStamp, performance.now());
-    const pressPosition = reelPosition(t, reel.startTime, reel.msPerSymbol);
+    if (!canStop(t, reel.startTime)) return;
+    const pressPosition = reelPosition(t, reel.startTime, reel.msPerSymbol, null, reel.startPosition);
     const base = stopPositionWithoutSlip(pressPosition);
     reel.stopButton.disabled = true;
+    reel.decidedAt = performance.now();
     reel.deviation = bitaDeviation(reel.strip, targetFor(i), pressPosition, reel.msPerSymbol);
 
     if (mode.goal === null) {
@@ -254,6 +313,8 @@ reels.forEach((reel, i) => {
       const slip = reel.stopTarget - base;
       reel.resultEl.textContent = slip > 0 ? `スベリ${slip}コマ` : 'スベリなし';
     }
+    // 表示を先回りさせていると、表示がすでに停止位置を過ぎていることがある
+    reel.overshoot = reel.position - reel.stopTarget;
   });
 });
 
@@ -286,5 +347,34 @@ for (const tab of document.querySelectorAll<HTMLButtonElement>('.tab')) {
   });
 }
 
+function showOffset(): void {
+  offsetValueEl.textContent = formatOffset(settings.timingOffsetMs);
+}
+
+function setOffset(offsetMs: number): void {
+  settings.timingOffsetMs = clampOffset(offsetMs);
+  if (storage) saveSettings(storage, settings);
+  showOffset();
+}
+
+document.querySelector('#offset-minus')!.addEventListener('click', () => {
+  setOffset(settings.timingOffsetMs - OFFSET_STEP);
+  offsetMessageEl.textContent = '';
+});
+document.querySelector('#offset-plus')!.addEventListener('click', () => {
+  setOffset(settings.timingOffsetMs + OFFSET_STEP);
+  offsetMessageEl.textContent = '';
+});
+document.querySelector('#offset-auto')!.addEventListener('click', () => {
+  const suggestion = suggestOffset(storage ? loadRecords(storage) : []);
+  if (suggestion === null) {
+    offsetMessageEl.textContent = `ビタ押しモードで${CALIBRATION_MIN_TRIALS}回以上プレイすると自動調整できます`;
+    return;
+  }
+  setOffset(suggestion.offsetMs);
+  offsetMessageEl.textContent = `直近${suggestion.trials}回のビタ押しから「${formatOffset(settings.timingOffsetMs)}」に設定しました`;
+});
+
+showOffset();
 setMachine(machine);
 setMode(mode);

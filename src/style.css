@@ -234,3 +234,38 @@ button:disabled {
   margin: 0;
   text-align: center;
 }
+
+.offset {
+  width: 100%;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.offset summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.offset-help,
+.offset-message {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.offset-message:empty {
+  display: none;
+}
+
+.offset-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.offset-buttons button {
+  flex: 1;
+  height: 40px;
+  font-size: 14px;
+  background: #44444f;
+}
