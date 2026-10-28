@@ -289,3 +289,51 @@ button:disabled {
   color: #aaa;
   text-align: center;
 }
+
+.guide {
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #3a3a42;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.guide h2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.guide details {
+  background: #26262c;
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+}
+
+.guide summary {
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.guide ul,
+.guide ol {
+  margin: 6px 0 4px;
+  padding-left: 1.2em;
+}
+
+.guide li {
+  margin-bottom: 6px;
+}
+
+.guide b {
+  color: #ffd54f;
+}
+
+.guide-note {
+  font-size: 12px;
+  color: #999;
+  margin: 8px 0 0;
+}
