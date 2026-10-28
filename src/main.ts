@@ -1,5 +1,6 @@
 import './style.css';
 import {
+  ACCEL_MS,
   bounceOffset,
   canStop,
   isBouncing,
@@ -11,7 +12,7 @@ import {
   type SymbolId,
 } from './reel';
 import { bitaDeviation, formatFrames, formatMs, type BitaResult } from './judge';
-import { alignedLine, nextStreak, stopWithPullIn, type Streak } from './align';
+import { alignedLine, isTenpai, nextStreak, stopWithPullIn, type Streak } from './align';
 import { pressTime } from './input';
 import { loadMachines, msPerSymbol, type Machine, type Row } from './machine';
 import { MODES, type Mode, type ModeId } from './modes';
@@ -83,6 +84,7 @@ const machineSelect = document.querySelector<HTMLSelectElement>('#machine')!;
 const modeSelect = document.querySelector<HTMLSelectElement>('#mode')!;
 const targetField = document.querySelector<HTMLElement>('#target-field')!;
 const targetSelect = document.querySelector<HTMLSelectElement>('#target')!;
+const modeHintEl = document.querySelector<HTMLElement>('#mode-hint')!;
 const verdictEl = document.querySelector<HTMLElement>('#verdict')!;
 const streakEl = document.querySelector<HTMLElement>('#streak')!;
 const lever = document.querySelector<HTMLButtonElement>('#lever')!;
@@ -164,6 +166,7 @@ function setMachine(next: Machine): void {
 function setMode(next: Mode): void {
   mode = next;
   targetField.hidden = mode.goal !== null;
+  modeHintEl.textContent = mode.hint;
   reels.forEach((reel, i) => reel.canvas.classList.toggle('inactive', !mode.activeReels.includes(i)));
   clearResults();
   showStreak();
@@ -207,7 +210,8 @@ function finishGame(): void {
 
   streaks.set(mode.id, nextStreak(streaks.get(mode.id)!, success));
   showStreak();
-  saveTrial(success, active.map((reel) => reel.deviation!));
+  const deviations = active.map((reel) => reel.deviation).filter((d): d is BitaResult => d !== null);
+  if (deviations.length > 0) saveTrial(success, deviations);
 
   lever.disabled = false;
   setSettingsDisabled(false);
@@ -292,7 +296,7 @@ lever.addEventListener('pointerdown', (event) => {
   }
   sound.unlock();
   sound.lever();
-  sound.startSpin();
+  sound.startSpin(ACCEL_MS, 1000 / reels[mode.activeReels[0]].msPerSymbol);
   gameRunning = true;
   lever.disabled = true;
   setSettingsDisabled(true);
@@ -327,8 +331,16 @@ reels.forEach((reel, i) => {
     // 画面上でリールが止まる時刻に停止音を鳴らす
     const stoppedAt = stopTime(reel.startTime, reel.msPerSymbol, reel.stopTarget, reel.startPosition);
     const delay = stoppedAt - settings.timingOffsetMs - performance.now();
-    sound.stopClick(delay);
-    if (mode.activeReels.every((j) => reels[j].stopTarget !== null)) sound.stopSpin(delay);
+    const stops = reels.map((r, j) => (mode.activeReels.includes(j) ? r.stopTarget : null));
+    const remaining = mode.activeReels.filter((j) => reels[j].stopTarget === null).length;
+    sound.stopClick(delay, mode.activeReels.length - remaining - 1);
+    if (remaining === 0) {
+      sound.stopSpin(delay);
+      sound.stopTenpai(delay);
+    } else {
+      sound.setSpinLevel(remaining / mode.activeReels.length, delay);
+      if (mode.goal !== null && isTenpai(machine.reels, stops, mode.goal, machine.lines)) sound.tenpai(delay);
+    }
   });
 });
 

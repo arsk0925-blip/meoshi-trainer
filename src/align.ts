@@ -65,6 +65,21 @@ export function alignedLine(
   return lines.findIndex((line) => lineStillPossible(strips, stops, goal, line));
 }
 
+/**
+ * テンパイ: 狙うリールが残り1本で、止まっているリールだけ見ると揃う可能性のあるラインがある
+ */
+export function isTenpai(
+  strips: readonly (readonly SymbolId[])[],
+  stops: readonly (number | null)[],
+  goal: Goal,
+  lines: readonly (readonly Row[])[],
+): boolean {
+  const remaining = goal.filter((want, i) => want !== null && stops[i] === null).length;
+  const targeted = goal.filter((want) => want !== null).length;
+  if (remaining !== 1 || targeted < 2) return false;
+  return lines.some((line) => lineStillPossible(strips, stops, goal, line));
+}
+
 export interface Streak {
   current: number;
   best: number;

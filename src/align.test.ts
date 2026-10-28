@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignedLine, nextStreak, stopWithPullIn, symbolInRow, type Goal } from './align';
+import { alignedLine, isTenpai, nextStreak, stopWithPullIn, symbolInRow, type Goal } from './align';
 import { loadMachines } from './machine';
 
 // 機種A（配列表の番号 − 1 = 添字）
@@ -77,6 +77,24 @@ describe('alignedLine', () => {
     expect(alignedLine(strips, [3, null, null], CHERRY, lines)).toBe(1);
     expect(alignedLine(strips, [5, null, null], CHERRY, lines)).toBe(2);
     expect(alignedLine(strips, [6, null, null], CHERRY, lines)).toBe(-1);
+  });
+});
+
+describe('isTenpai', () => {
+  it('2本止まって、残り1本で揃うラインがあればテンパイ', () => {
+    expect(isTenpai(strips, [9, 19, null], BIG, lines)).toBe(true); // 中段 7-7
+    expect(isTenpai(strips, [8, 19, null], BIG, lines)).toBe(true); // 左上段・中中段（右下がり）
+    expect(isTenpai(strips, [null, 19, 19], BIG, lines)).toBe(true); // 中・右が先に止まっても同じ
+  });
+
+  it('揃うラインがない・まだ1本しか止まっていない・全部止まった場合はテンパイではない', () => {
+    expect(isTenpai(strips, [9, 18, null], BIG, lines)).toBe(false);
+    expect(isTenpai(strips, [9, null, null], BIG, lines)).toBe(false);
+    expect(isTenpai(strips, [9, 19, 19], BIG, lines)).toBe(false);
+  });
+
+  it('チェリー狙い（左リールだけ）はテンパイがない', () => {
+    expect(isTenpai(strips, [null, null, null], CHERRY, lines)).toBe(false);
   });
 });
 
