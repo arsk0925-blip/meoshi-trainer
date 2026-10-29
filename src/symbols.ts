@@ -18,19 +18,19 @@ export function drawSymbol(ctx: Ctx, id: SymbolId, cx: number, cy: number, width
 }
 
 const DRAWERS: Record<SymbolId, (ctx: Ctx, halfWidth: number) => void> = {
-  // 横幅いっぱいの赤い7
+  // 横幅いっぱいの太い赤い7
   '7': (ctx, halfWidth) => {
     const w = Math.min(halfWidth * 0.92, 80);
     ctx.save();
     ctx.scale(w / 50, 1);
     ctx.beginPath();
-    ctx.moveTo(-46, -37);
-    ctx.lineTo(48, -37);
-    ctx.lineTo(48, -18);
-    ctx.lineTo(8, 40);
-    ctx.lineTo(-22, 40);
-    ctx.lineTo(16, -12);
-    ctx.lineTo(-40, -12);
+    ctx.moveTo(-48, -41);
+    ctx.lineTo(49, -41);
+    ctx.lineTo(49, -16);
+    ctx.lineTo(16, 42);
+    ctx.lineTo(-27, 42);
+    ctx.lineTo(3, -8);
+    ctx.lineTo(-42, -8);
     ctx.closePath();
     ctx.restore();
     ctx.lineJoin = 'round';
